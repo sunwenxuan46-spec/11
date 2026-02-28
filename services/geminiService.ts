@@ -102,8 +102,11 @@ export const fetchFoodRecommendation = async (): Promise<FoodRecommendation> => 
     }
 
     return JSON.parse(text) as FoodRecommendation;
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error fetching food recommendation:", error);
+    if (error.status === 429 || error.message?.includes('429')) {
+       throw new Error("API usage limit exceeded. Please try again later.");
+    }
     throw error;
   }
 };
@@ -133,8 +136,14 @@ export const generateFoodImage = async (dishName: string, description: string): 
     // If no image is returned, log a warning but don't crash. Return a relevant placeholder.
     console.warn("No inlineData found in Gemini response. Using fallback image.");
     return `https://image.pollinations.ai/prompt/${encodeURIComponent(dishName + " food photography")}`;
-  } catch (error) {
-    console.error("Error generating food image:", error);
+  } catch (error: any) {
+    // Gracefully handle 429 or other errors by falling back to Pollinations
+    if (error.status === 429 || (error.message && error.message.includes('429'))) {
+       console.warn("Gemini Image Quota Exceeded (429). Switching to fallback image provider.");
+    } else {
+       console.error("Error generating food image:", error);
+    }
+    
     // Return a fallback placeholder if generation fails so the UI still works
     return `https://image.pollinations.ai/prompt/${encodeURIComponent(dishName + " food photography")}`; 
   }
